@@ -1,23 +1,21 @@
-package mini_workflow
+package main
 
 import (
-	"workflows"
-	"tasks"
+	"mini_workflow/tasks"
+	"mini_workflow/workflows"
+	"mini_workflow/core"
 )
 
 func main() {
-	var engine = CreateWorkflowEngine()
+	var engine = core.CreateWorkflowEngine()
 
-	engine.TaskRegistry.Register(tasks.CreateSleepTask)
+	engine.TaskRegistry.Register(core.CastTaskProvider(tasks.CreateSleepTask))
 
-
-	
-	var workflows = []func() Workflow {
+	var workflowProviders = []func() core.Workflow{
 		workflows.Demo,
-		workflows.Demo2,
 	}
 
-	for _, wfProvider := range workflows {
+	for _, wfProvider := range workflowProviders {
 		engine.Coordinator.Register(wfProvider)
 	}
 

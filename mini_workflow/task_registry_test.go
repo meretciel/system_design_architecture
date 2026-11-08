@@ -1,4 +1,4 @@
-package mini_workflow
+package main
 
 import (
 	"reflect"

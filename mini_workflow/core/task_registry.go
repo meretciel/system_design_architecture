@@ -1,4 +1,4 @@
-package mini_workflow
+package core
 
 import (
 	"fmt"
@@ -47,4 +47,10 @@ func (tr *TaskRegistry) CreateByName(name string) Task {
 	}
 
 	return creator()
+}
+
+
+func (r *TaskRegistry) IsTaskRegistered(name string) bool {
+	_, exists := r.creators[name]
+	return exists
 }
