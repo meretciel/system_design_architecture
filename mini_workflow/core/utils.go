@@ -15,8 +15,8 @@ func CastTaskProvider[T Task](provider func() T) func() Task {
 
 // This is the unique identifier of a Task.
 // It's the package + task struct name
-func GetTaskSpecIdentifier(t *Task) string {
-	var typ = reflect.TypeOf(*t)
+func GetTaskSpecIdentifier(t Task) string {
+	var typ = reflect.TypeOf(t)
 	return fmt.Sprintf("%s.%s", typ.PkgPath(), typ.Name())
 }
 

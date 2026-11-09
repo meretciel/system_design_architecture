@@ -12,8 +12,13 @@ type SleepTask struct {
 	mu sync.Mutex
 }
 
+// We need to return a pointer because it's the pointer receiver
+// that implements the Task interface. SleepTask struct itself
+// does not implemnet the Task interface.
 func CreateSleepTask() *SleepTask {
-	return &SleepTask{}
+	var t = SleepTask{}
+	t.Init()
+	return &t
 }
 
 

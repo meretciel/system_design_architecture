@@ -4,9 +4,12 @@ import (
 	"mini_workflow/tasks"
 	"mini_workflow/workflows"
 	"mini_workflow/core"
+	"log/slog"
 )
 
 func main() {
+
+
 	var engine = core.CreateWorkflowEngine()
 
 	engine.TaskRegistry.Register(core.CastTaskProvider(tasks.CreateSleepTask))
@@ -20,4 +23,6 @@ func main() {
 	}
 
 	engine.Run()
+
+	slog.Info("Program ends")
 }

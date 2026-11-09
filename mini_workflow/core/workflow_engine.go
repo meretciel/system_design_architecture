@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 
@@ -26,7 +27,7 @@ func CreateWorkflowEngine() WorkflowEngine {
 //   - Verify tasks used in workflows are registered
 func (engine *WorkflowEngine) ValidateWorkflow(w *Workflow) error {
 	for i := range w.Tasks {
-		var name = GetTaskSpecIdentifier(&(w.Tasks[i]))
+		var name = GetTaskSpecIdentifier(w.Tasks[i])
 		if !engine.isTaskRegistered(name) {
 			return fmt.Errorf("Task %s is not registered in the workflow engine.", name)
 		}
@@ -43,4 +44,6 @@ func (engine *WorkflowEngine) isTaskRegistered(name string) bool {
 
 func (engine *WorkflowEngine) Run() {
 	slog.Info("Workflow engine starts to run")
+	go engine.Coordinator.Run()
+	time.Sleep(time.Second * 5)
 }

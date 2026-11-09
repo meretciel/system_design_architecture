@@ -19,16 +19,15 @@ const (
 	StateInterrupted State = "Interrupted"
 )
 
-
 type Task interface {
 	// Core
 	GetState() State
 	SetState(s State)
-	GetDependencies() map[string]*Task
-	GetDependency(name string) *Task
-	AddDependency(task *Task)
-	AddNamedDependency(name string, task *Task)
-	
+	GetDependencies() map[string]Task
+	GetDependency(name string) Task
+	AddDependency(task Task)
+	AddNamedDependency(name string, task Task)
+
 	// Customization
 	SerializeParam() string
 	LoadParam(param string) error
@@ -37,15 +36,24 @@ type Task interface {
 	LoadResult() error
 
 	Run() error
-	CheckState() State
+	CheckState() State // This needs to be concurrency safe.
 }
 
+// TaskCore provides the core implemenation of the Task interface.
+// In interesting implication of using pointer receiver is that
+// Only pointers can be passed in the place of Task.
+// This has consequence of user code though..
 type TaskCore struct {
 	state        State
 	result       any
-	dependencies map[string]*Task
+	dependencies map[string]Task
 }
 
+func (t *TaskCore) Init() {
+	t.state = StateNew
+	t.result = nil
+	t.dependencies = make(map[string]Task)
+}
 
 func (t *TaskCore) GetState() State {
 	return t.state
@@ -55,11 +63,11 @@ func (t *TaskCore) SetState(s State) {
 	t.state = s
 }
 
-func (t *TaskCore) GetDependencies() map[string]*Task {
+func (t *TaskCore) GetDependencies() map[string]Task {
 	return t.dependencies
 }
 
-func (t *TaskCore) GetDependency(name string) *Task {
+func (t *TaskCore) GetDependency(name string) Task {
 	v, exists := t.dependencies[name]
 	if !exists {
 		panic(fmt.Sprintf("Dependency %s does not exist", name))
@@ -67,7 +75,7 @@ func (t *TaskCore) GetDependency(name string) *Task {
 	return v
 }
 
-func (t *TaskCore) AddNamedDependency(name string, task *Task) {
+func (t *TaskCore) AddNamedDependency(name string, task Task) {
 	_, exists := t.dependencies[name]
 	if exists {
 		panic(fmt.Sprintf("Dependency %s already exists.", name))
@@ -75,19 +83,15 @@ func (t *TaskCore) AddNamedDependency(name string, task *Task) {
 	t.dependencies[name] = task
 }
 
-func (t *TaskCore) AddDependency(task *Task) {
+func (t *TaskCore) AddDependency(task Task) {
 	var typ = reflect.TypeOf(task)
 	var name = fmt.Sprintf("%s.%s", typ.PkgPath(), typ.Name())
 	t.AddNamedDependency(name, task)
 }
 
-
-
-
-
 type Workflow struct {
-	Tasks []Task
-	CriticalTasks []*Task
+	Tasks         []Task
+	CriticalTasks []Task
 }
 
 func (w *Workflow) GetState() State {
@@ -108,7 +112,7 @@ func (w *Workflow) GetState() State {
 	var counts = make(map[State]int)
 
 	for _, task := range w.CriticalTasks {
-		counts[(*task).GetState()] = counts[(*task).GetState()] + 1	
+		counts[task.GetState()] = counts[task.GetState()] + 1
 	}
 
 	if counts[StateSucceeded] == len(w.CriticalTasks) {
@@ -127,7 +131,6 @@ func (w *Workflow) GetState() State {
 		return StateTimedOut
 	}
 
-
 	if counts[StateCancelled] > 0 {
 		return StateCancelled
 	}
@@ -136,73 +139,19 @@ func (w *Workflow) GetState() State {
 
 }
 
-
 type TaskExecution struct {
-	RunId string
-	DependencyTaskIds map[string]string
-	TaskParameter string
-	Task *Task
+	RunId                string
+	DependencyTaskRunIds map[string]string
+	TaskParameter        string
+	Task                 Task
 }
 
 type WorkflowExecution struct {
 	// Runtime information
-	RunId string
-	WorkflowName string
-	TaskRunIds []string
-	CriticalTaskRunIds []string
+	RunId              string
+	WorkflowName       string
+	TaskExecutions         []*TaskExecution
+	CriticalTaskExecutions []*TaskExecution
 	// In memory instance
 	Workflow *Workflow
 }
-
-
-
-
-
-
-// func (t *GenerateReport) Run() error {
-// 	var taskReadBook = t.GetDependency(reflect.TypeFor[ReadBookTask]()).(ReadBookTask) 
-// 	var result = taskReadBook.GetResult()	// because GetResult is not in the interface, it has type now
-// }
-
-// func ExampleWorkflow() Workflow {
-// 	// User code
-// 	var readBookParam = ""
-// 	var readBookTask = TaskRegistry.Create(reflect.TypeFor[ReadBook]()).SetParameter(readBookParam)
-
-// 	var genReportParam = ""
-// 	var genReportTask = TaskRegistry.Create(reflect.TypeFor[GenerateRepot]()).SetParameter(genReportParam)
-
-// 	// Engine code
-// 	var paramStr = ""
-// 	var readBookTask = TaskRegistry.CreateFromName("ReadBook")
-// 	readBookTask.LoadParam(paramStr)
-	
-// 	var genReportParamStr = ""
-// 	var genReportTask = TaskRegistry.CreateFromName("GenerateReport")
-// 	genReportTask.LoadParam(genReportParamStr)
-// 	genReportTask.AddNamedDependency("ReadBook", readBookTask)
-
-
-
-// }
-	
-
-
-// 	var taskGenerateReport = TaskRegistry.Create("GenerateReport").SetParameter(generateReportParam)
-// 	taskGenerateReport.AddDependency(taskReadBook)
-// }
-
-
-// func ExampleDefineTasks() {
-
-// 	var tf = TaskFactory {
-// 		"mock-task",
-// 		reflect.TypeFor[time.Duration](),
-// 		func (arg any) task.MockTask {
-// 			var typedArg = arg.(time.Duration)
-// 			return task.CreateMockTask(typedArg)
-// 		},
-
-// 	}
-
-// }
