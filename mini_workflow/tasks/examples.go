@@ -2,14 +2,12 @@ package tasks
 
 import (
 	core "mini_workflow/core"
-	"sync"
 	"time"
 )
 
 type SleepTask struct {
 	core.TaskCore
 	duration time.Duration
-	mu sync.Mutex
 }
 
 // We need to return a pointer because it's the pointer receiver
@@ -40,17 +38,12 @@ func (t *SleepTask) LoadResult() error {
 
 func (t *SleepTask) Run() error {
 	time.Sleep(t.duration)
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
 	t.SetState(core.StateSucceeded)
 	return nil
 }
 
 
 func (t *SleepTask) CheckState() core.State {
-	t.mu.Lock()
-	defer t.mu.Unlock()
 	return t.GetState()
 }
 

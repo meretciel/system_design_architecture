@@ -15,10 +15,12 @@ type WorkflowEngine struct {
 
 
 func CreateWorkflowEngine() WorkflowEngine {
+	var scheduler = CreateScheduler()
+	
 	return WorkflowEngine {
 		TaskRegistry: CreateTaskRegistry(),
-		Coordinator: CreateCoordinator(),
-		Scheduler: CreateScheduler(),
+		Coordinator: CreateCoordinator(scheduler.Mailbox),
+		Scheduler: scheduler,
 	}
 }
 
@@ -45,5 +47,6 @@ func (engine *WorkflowEngine) isTaskRegistered(name string) bool {
 func (engine *WorkflowEngine) Run() {
 	slog.Info("Workflow engine starts to run")
 	go engine.Coordinator.Run()
-	time.Sleep(time.Second * 5)
+	go engine.Scheduler.Run()
+	time.Sleep(time.Second * 15)
 }

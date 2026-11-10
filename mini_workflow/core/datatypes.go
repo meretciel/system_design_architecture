@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 type State string
@@ -21,8 +22,8 @@ const (
 
 type Task interface {
 	// Core
-	GetState() State
-	SetState(s State)
+	GetState() State	// This needs to be concurrency safe
+	SetState(s State)   // This needs to be concurrency safe
 	GetDependencies() map[string]Task
 	GetDependency(name string) Task
 	AddDependency(task Task)
@@ -47,6 +48,7 @@ type TaskCore struct {
 	state        State
 	result       any
 	dependencies map[string]Task
+	mu sync.Mutex
 }
 
 func (t *TaskCore) Init() {
@@ -56,10 +58,14 @@ func (t *TaskCore) Init() {
 }
 
 func (t *TaskCore) GetState() State {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	return t.state
 }
 
 func (t *TaskCore) SetState(s State) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.state = s
 }
 
@@ -154,4 +160,9 @@ type WorkflowExecution struct {
 	CriticalTaskExecutions []*TaskExecution
 	// In memory instance
 	Workflow *Workflow
+}
+
+
+func (w *WorkflowExecution) GetState() State {
+	return w.Workflow.GetState()
 }
