@@ -20,6 +20,21 @@ const (
 	StateInterrupted State = "Interrupted"
 )
 
+
+type WorkerState string
+const (
+	WorkerStateRunning WorkerState = "Running"
+	WorkerStateIdle WorkerState = "Idle"
+)
+
+
+type ResponseState string
+const (
+	ResponseStateAck ResponseState = "Ack"
+	ResponseStateFailed ResponseState = "Failed"
+)
+
+
 type Task interface {
 	// Core
 	GetState() State	// This needs to be concurrency safe
@@ -165,4 +180,33 @@ type WorkflowExecution struct {
 
 func (w *WorkflowExecution) GetState() State {
 	return w.Workflow.GetState()
+}
+
+
+// Messages
+type WorkerReport struct {
+	Timestamp int64
+	Id string
+	State WorkerState
+	TaskRunId *string
+}
+
+type ReqRunTask struct {
+	ReqId string
+	Task Task
+}
+
+type ResponseRunTask struct {
+	ReqId string
+	ResponseState ResponseState
+}
+
+
+type WorkerInfo struct {
+	Id string
+	Mailbox <-chan any
+}
+
+type MsgWorkerDiscovery struct {
+	WorkerInfoList []WorkerInfo
 }

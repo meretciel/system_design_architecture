@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+
 )
 
 func CastTaskProvider[T Task](provider func() T) func() Task {
@@ -25,5 +26,4 @@ func GetWorkflowSpecIdentifier(w func() Workflow) string {
 	var p = reflect.ValueOf(w).Pointer()
 	return runtime.FuncForPC(p).Name()
 }
-
 

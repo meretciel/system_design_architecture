@@ -25,6 +25,6 @@ func (s *Scheduler) Run() {
 	// }
 
 	for msg := range s.Mailbox {
-		slog.Info(fmt.Sprintf("Received a message %+v", msg), COMPONENT, SCHEDULER)
+		slog.Info(fmt.Sprintf("Scheduler received a message %#v", msg), COMPONENT, SCHEDULER)
 	}
 }

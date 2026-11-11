@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 
@@ -11,16 +13,24 @@ type WorkflowEngine struct {
 	TaskRegistry TaskRegistry
 	Coordinator Coordinator
 	Scheduler Scheduler
+	config WorkflowEngineConfig
 }
 
+type WorkflowEngineConfig struct {
+	NumWorkers int
+	WorkerTickInterval time.Duration
+	WorkflowPollInterval time.Duration
+}
 
-func CreateWorkflowEngine() WorkflowEngine {
+func NewWorkflowEngine(config WorkflowEngineConfig) WorkflowEngine {
+
 	var scheduler = CreateScheduler()
-	
+
 	return WorkflowEngine {
 		TaskRegistry: CreateTaskRegistry(),
-		Coordinator: CreateCoordinator(scheduler.Mailbox),
+		Coordinator: NewCoordinator(config.WorkflowPollInterval, scheduler.Mailbox),
 		Scheduler: scheduler,
+		config: config,
 	}
 }
 
@@ -48,5 +58,24 @@ func (engine *WorkflowEngine) Run() {
 	slog.Info("Workflow engine starts to run")
 	go engine.Coordinator.Run()
 	go engine.Scheduler.Run()
+
+
+	var workerInfoList = []WorkerInfo{}
+	var workers = []Worker{}
+
+	for range engine.config.NumWorkers {
+		var worker = NewWorker(uuid.NewString(), engine.Scheduler.Mailbox, engine.config.WorkerTickInterval)
+		workers = append(workers, worker)
+		workerInfoList = append(workerInfoList, WorkerInfo{Id: worker.WorkerId, Mailbox: worker.Mailbox})
+	}
+
+	for i := range engine.config.NumWorkers {
+		go workers[i].Run()
+	}
+
+	engine.Scheduler.Mailbox <- MsgWorkerDiscovery {
+		WorkerInfoList: workerInfoList,
+	}
+
 	time.Sleep(time.Second * 15)
 }

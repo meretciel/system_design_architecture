@@ -18,14 +18,14 @@ type Coordinator struct {
 	scheduler chan<- any
 }
 
-func CreateCoordinator(schedulerMailbox chan<- any) Coordinator {
+func NewCoordinator(workflowPollInterval time.Duration, schedulerMailbox chan<- any) Coordinator {
 	return Coordinator{
 		taskRegistry:       CreateTaskRegistry(),
 		workflowProviders:  make(map[string]func() Workflow),
 		workflowExecutions: make(map[string]WorkflowExecution),
 		taskExecutions:     make(map[Task]*TaskExecution),
 		// taskRunIdToExecution: make(map[string]*TaskExecution),
-		workflowPollInterval: time.Second,
+		workflowPollInterval: workflowPollInterval,
 		scheduler: schedulerMailbox,
 	}
 }
@@ -46,7 +46,7 @@ func (co *Coordinator) Run() {
 	co.loadFromPersistenceStore()
 
 	for {
-		slog.Info("Poll workflow", COMPONENT, COORDINATOR)
+		slog.Info("Coordinator polls workflow", COMPONENT, COORDINATOR)
 
 		// Check the execution state of workflow
 		for name, workflowProvider := range co.workflowProviders {
@@ -102,8 +102,9 @@ func (co *Coordinator) Run() {
 				}
 
 				co.workflowExecutions[name] = workflowExecution
-				slog.Info("Created a new workflow execution.", 					
-					COMPONENT, WORKFLOW_EXECUTION, 
+				slog.Info("Coordinator created a new workflow execution.", 					
+					COMPONENT, COORDINATOR,
+					ENTITY, WORKFLOW_EXECUTION,
 					RUN_ID, workflowExecution.RunId, 
 					NAME, workflowExecution.WorkflowName,)
 
@@ -115,15 +116,17 @@ func (co *Coordinator) Run() {
 				switch state {
 				
 				case StateCancelled, StateFailed, StateInterrupted, StateSucceeded:
-					slog.Info("Workflow execution is terminated.", 
-					COMPONENT, WORKFLOW_EXECUTION, 
+					slog.Info("Coordinator notices workflow execution is terminated.", 
+					COMPONENT, COORDINATOR, 
+					ENTITY, WORKFLOW_EXECUTION,
 					RUN_ID, workflowExecution.RunId, 
 					NAME, workflowExecution.WorkflowName,
 					STATE, state)
 
 				default:
-					slog.Info("Wofklow execution is being tracked.",
-					COMPONENT, WORKFLOW_EXECUTION, 
+					slog.Info("Workflow execution is being tracked by coordinator.",
+					COMPONENT, COORDINATOR,
+					ENTITY, WORKFLOW_EXECUTION,
 					RUN_ID, workflowExecution.RunId, 
 					NAME, workflowExecution.WorkflowName,
 					STATE, state)
